@@ -29,10 +29,37 @@ type AvatarConfig = {
 // Simulated typing delay
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const HAIR_STYLES = ['Straight', 'Bangs', 'Curly', 'Bun', 'Short', 'Ponytail'];
-const HAIR_COLORS = ['Brunette', 'Blonde', 'Black', 'Redhead', 'Pink'];
-const BODY_TYPES = ['Skinny', 'Athletic', 'Average', 'Curvy', 'Plus Size'];
-const CHEST_SIZES = ['Small', 'Medium', 'Large', 'Extra Large'];
+const getPImg = (prompt: string, seed: number, ratio: 'portrait'|'square' = 'portrait') => 
+  `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=300&height=${ratio === 'portrait' ? 400 : 300}&nologo=true&seed=${seed}`;
+
+const HAIR_STYLES = [
+  { name: 'Straight', img: getPImg('beautiful brunette woman straight hair, fashion portrait, dark background', 101) },
+  { name: 'Bangs', img: getPImg('beautiful brunette woman with bangs, fashion portrait, dark background', 102) },
+  { name: 'Curly', img: getPImg('beautiful brunette woman curly hair, fashion portrait, dark background', 103) },
+  { name: 'Bun', img: getPImg('beautiful brunette woman hair in a bun, fashion portrait, dark background', 104) },
+  { name: 'Short', img: getPImg('beautiful brunette woman short hair, fashion portrait, dark background', 105) },
+  { name: 'Ponytail', img: getPImg('beautiful brunette woman ponytail, fashion portrait, dark background', 106) }
+];
+const HAIR_COLORS = [
+  { name: 'Brunette', img: getPImg('brunette wavy hair from behind, light background', 201, 'square') },
+  { name: 'Blonde', img: getPImg('blonde wavy hair from behind, light background', 202, 'square') },
+  { name: 'Black', img: getPImg('black wavy hair from behind, light background', 203, 'square') },
+  { name: 'Redhead', img: getPImg('red wavy hair from behind, light background', 204, 'square') },
+  { name: 'Pink', img: getPImg('pink wavy hair from behind, light background', 205, 'square') }
+];
+const BODY_TYPES = [
+  { name: 'Skinny', img: getPImg('skinny female torso in white lace bra', 301) },
+  { name: 'Athletic', img: getPImg('athletic female torso with abs in blue sports bra', 302) },
+  { name: 'Average', img: getPImg('average female torso in black lace bra', 303) },
+  { name: 'Curvy', img: getPImg('curvy female torso in purple lace bra', 304) },
+  { name: 'BBW', img: getPImg('plus size bbw female torso in red lace bra', 305) }
+];
+const CHEST_SIZES = [
+  { name: 'Small', img: getPImg('small chest female torso in black bra', 401, 'square') },
+  { name: 'Medium', img: getPImg('medium chest female torso in black bra', 402, 'square') },
+  { name: 'Large', img: getPImg('large chest female torso in black bra', 403, 'square') },
+  { name: 'Extra Large', img: getPImg('extra large chest female torso in black bra', 404, 'square') }
+];
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -81,7 +108,7 @@ CRITICAL RULES:
 Example: "Toh tu sach mein manta hai ki Marvel DC se better hai?|||Kitna basic logic hai tera!"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3.1-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: prompt,
             config: {
               temperature: 0.9,
@@ -98,10 +125,11 @@ Example: "Toh tu sach mein manta hai ki Marvel DC se better hai?|||Kitna basic l
              if (i < parts.length - 1) await sleep(Math.random() * 1500 + 800);
           }
 
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error starting chat:', error);
+          const errMsg = error?.message?.includes('429') ? 'Arre yaar, AI quota exceed ho gaya hai. Wait kar thoda.' : 'Tu offline chala gaya kya? Reply toh kar.';
           setMessages([
-            { id: Date.now().toString(), role: 'model', text: 'Tu offline chala gaya kya? Reply toh kar.' },
+            { id: Date.now().toString(), role: 'model', text: errMsg },
           ]);
         } finally {
           setIsTyping(false);
@@ -160,7 +188,7 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
 3. Don't use "|||" in analysis mode, just give a well-formatted paragraph.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: chatHistory,
         config: {
           systemInstruction,
@@ -183,11 +211,12 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
       }
 
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating response:', error);
+      const errMsg = error?.message?.includes('429') ? 'Arre yaar, AI quota exceed ho gaya hai. Thodi der baad try kar.' : 'Ugh, mera network issue hai. Ek min.';
       setMessages((prev) => [
         ...prev,
-        { id: Date.now().toString(), role: 'model', text: 'Ugh, mera network issue hai. Ek min.' },
+        { id: Date.now().toString(), role: 'model', text: errMsg },
       ]);
     } finally {
       setIsTyping(false);
@@ -204,7 +233,7 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
       // 1. Generate Name
       const namePrompt = `Generate a single realistic, modern Indian first name for a ${avatarConfig.age} year old girl. No other text.`;
       const response = await ai.models.generateContent({
-         model: 'gemini-3.1-pro-preview',
+         model: 'gemini-3-flash-preview',
          contents: namePrompt,
          config: { temperature: 0.8 }
       });
@@ -212,7 +241,7 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
       setAiName(generatedName);
 
       // 2. Generate Avatar Image URL using pollinations.ai (free, no key needed)
-      const imagePrompt = `Highly realistic, aesthetic instagram selfie portrait photography of a beautiful ${avatarConfig.age} year old indian girl. She has ${avatarConfig.hairStyle} ${avatarConfig.hairColor} hair. ${avatarConfig.bodyType} body. Soft natural lighting, casual but stylish look, slight mysterious smile. High quality, photorealistic, suitable for a profile picture.`;
+      const imagePrompt = `Highly realistic, aesthetic instagram selfie portrait photography of a beautiful Indian girl age ${avatarConfig.age} years. She has ${avatarConfig.hairStyle} ${avatarConfig.hairColor} hair. ${avatarConfig.bodyType} body. Soft natural lighting, casual but stylish look, slight mysterious smile. High quality, photorealistic, suitable for a profile picture.`;
       const encodedPrompt = encodeURIComponent(imagePrompt);
       const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true&seed=${Math.floor(Math.random() * 10000)}`;
       
@@ -266,15 +295,15 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
                       </div>
                       <input 
                         type="range" 
-                        min="18" 
-                        max="30" 
+                        min="14" 
+                        max="23" 
                         value={avatarConfig.age} 
                         onChange={(e) => setAvatarConfig({...avatarConfig, age: parseInt(e.target.value)})}
                         className="w-full accent-indigo-500"
                       />
                       <div className="flex justify-between w-full text-xs font-bold text-slate-400">
-                        <span>18</span>
-                        <span>30</span>
+                        <span>14</span>
+                        <span>23</span>
                       </div>
                     </div>
                     <div className="flex justify-center mt-8">
@@ -296,14 +325,18 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
                     
                     <div className="space-y-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Style</p>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                         {HAIR_STYLES.map(style => (
                           <button 
-                            key={style}
-                            onClick={() => setAvatarConfig({...avatarConfig, hairStyle: style})}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${avatarConfig.hairStyle === style ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white/60 text-slate-600 border-white/40 hover:bg-white'}`}
+                            key={style.name}
+                            onClick={() => setAvatarConfig({...avatarConfig, hairStyle: style.name})}
+                            className={`relative rounded-2xl overflow-hidden transition-all border-2 aspect-[3/4] ${avatarConfig.hairStyle === style.name ? 'border-indigo-500 scale-105 shadow-md shadow-indigo-200' : 'border-transparent hover:scale-105'}`}
                           >
-                            {style}
+                            <img src={style.img} alt={style.name} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs font-bold z-10 flex items-center justify-between">
+                              {style.name}
+                              {avatarConfig.hairStyle === style.name && <Check className="w-3 h-3 text-indigo-400" />}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -311,14 +344,18 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
 
                     <div className="space-y-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Color</p>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         {HAIR_COLORS.map(color => (
                           <button 
-                            key={color}
-                            onClick={() => setAvatarConfig({...avatarConfig, hairColor: color})}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${avatarConfig.hairColor === color ? 'bg-rose-400 text-white border-rose-400 shadow-md' : 'bg-white/60 text-slate-600 border-white/40 hover:bg-white'}`}
+                            key={color.name}
+                            onClick={() => setAvatarConfig({...avatarConfig, hairColor: color.name})}
+                            className={`relative rounded-2xl overflow-hidden transition-all border-2 aspect-square ${avatarConfig.hairColor === color.name ? 'border-rose-400 scale-105 shadow-md shadow-rose-200' : 'border-transparent hover:scale-105'}`}
                           >
-                            {color}
+                            <img src={color.img} alt={color.name} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs font-bold z-10 flex items-center justify-between">
+                              {color.name}
+                              {avatarConfig.hairColor === color.name && <Check className="w-3 h-3 text-rose-400" />}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -343,30 +380,37 @@ If YES: Drop your hidden persona. Act as a deep psychological analyst.
                     
                     <div className="space-y-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Body Type</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                         {BODY_TYPES.map(type => (
                           <button 
-                            key={type}
-                            onClick={() => setAvatarConfig({...avatarConfig, bodyType: type})}
-                            className={`p-3 rounded-2xl text-sm font-medium transition-all border flex flex-col items-center justify-center gap-2 ${avatarConfig.bodyType === type ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white/60 text-slate-600 border-white/40 hover:bg-white'}`}
+                            key={type.name}
+                            onClick={() => setAvatarConfig({...avatarConfig, bodyType: type.name})}
+                            className={`relative rounded-2xl overflow-hidden transition-all border-2 aspect-[3/4] ${avatarConfig.bodyType === type.name ? 'border-indigo-500 scale-105 shadow-md shadow-indigo-200' : 'border-transparent hover:scale-105'}`}
                           >
-                            {avatarConfig.bodyType === type && <Check className="w-4 h-4" />}
-                            {type}
+                            <img src={type.img} alt={type.name} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-[10px] md:text-xs font-bold z-10 flex items-center justify-between">
+                              {type.name}
+                              {avatarConfig.bodyType === type.name && <Check className="w-3 h-3 text-indigo-400" />}
+                            </div>
                           </button>
                         ))}
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Features</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Chest Size</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {CHEST_SIZES.map(size => (
                           <button 
-                            key={size}
-                            onClick={() => setAvatarConfig({...avatarConfig, chestSize: size})}
-                            className={`p-3 rounded-2xl text-xs font-medium transition-all border ${avatarConfig.chestSize === size ? 'bg-rose-400 text-white border-rose-400 shadow-md' : 'bg-white/60 text-slate-600 border-white/40 hover:bg-white'}`}
+                            key={size.name}
+                            onClick={() => setAvatarConfig({...avatarConfig, chestSize: size.name})}
+                            className={`relative rounded-2xl overflow-hidden transition-all border-2 aspect-square ${avatarConfig.chestSize === size.name ? 'border-rose-400 scale-105 shadow-md shadow-rose-200' : 'border-transparent hover:scale-105'}`}
                           >
-                            {size}
+                            <img src={size.img} alt={size.name} className="absolute inset-0 w-full h-full object-cover" />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-[10px] md:text-xs font-bold z-10 flex items-center justify-between">
+                              {size.name}
+                              {avatarConfig.chestSize === size.name && <Check className="w-3 h-3 text-rose-400" />}
+                            </div>
                           </button>
                         ))}
                       </div>
